@@ -21,7 +21,6 @@
             --separator-color: #e0e0e0;
         }
 
-        /* الثيمات المختلفة */
         .theme-default {
             --primary-color: #4a6fa5;
             --secondary-color: #166088;
@@ -157,7 +156,6 @@
             flex: 1;
         }
 
-        /* Header Styles */
         header {
             background-color: var(--navbar-bg);
             padding: 8px 20px;
@@ -244,7 +242,6 @@
             position: relative;
         }
 
-        /* تعديلات القائمة المنسدلة */
         .dropdown-content {
             display: none;
             position: absolute;
@@ -289,7 +286,6 @@
             margin-left: 8px;
         }
 
-        /* Books Grid */
         .books-container {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -352,7 +348,6 @@
             font-size: 14px;
         }
 
-        /* Modal Styles */
         .modal {
             display: none;
             position: fixed;
@@ -485,7 +480,6 @@
             margin-left: 6px;
         }
 
-        /* Footer Styles */
         footer {
             background-color: var(--footer-bg);
             color: var(--footer-text);
@@ -498,7 +492,6 @@
             font-size: 13px;
         }
 
-        /* Responsive Design */
         @media (max-width: 768px) {
             .header-content {
                 flex-wrap: wrap;
@@ -548,6 +541,27 @@
                 height: 36px;
                 padding: 0;
             }
+        }
+
+        .error-container {
+            grid-column: 1/-1;
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .error-icon {
+            font-size: 50px;
+            color: var(--favorite-color);
+            margin-bottom: 20px;
+        }
+
+        .error-title {
+            color: var(--favorite-color);
+            margin-bottom: 15px;
+        }
+
+        .error-message {
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -656,23 +670,23 @@
         // جلب بيانات الروايات من ملف JSON
         async function fetchBooksData() {
             try {
-                const response = await fetch('books-data.json');
+                const response = await fetch('novels_data.json');
                 
                 if (!response.ok) {
-                    throw new Error('فشل في جلب ملف البيانات. تأكد من وجود الملف وتسميته بشكل صحيح');
+                    throw new Error('تأكد من اتصال الانترنت');
                 }
                 
                 booksData = await response.json();
                 
                 // التحقق من صحة البيانات
                 if (!Array.isArray(booksData)) {
-                    throw new Error('تنسيق JSON غير صالح. يجب أن يحتوي الملف على مصفوفة من الكتب');
+                    throw new Error('تنسيق JSON غير صالح');
                 }
                 
                 // التحقق من وجود الخصائص الأساسية في كل كتاب
                 booksData.forEach((book, index) => {
                     if (!book.title || !book.author || !book.genre || !book.description) {
-                        throw new Error(`الكتاب في الفهرس ${index} يفتقد خصائص أساسية (title, author, genre, description)`);
+                        throw new Error('بيانات غير مكتملة في ملف JSON');
                     }
                 });
                 
@@ -681,36 +695,37 @@
                 
                 currentBooks = [...booksData];
                 renderBooks(currentBooks);
-                showToast("تم تحميل البيانات بنجاح");
                 
             } catch (error) {
                 console.error('حدث خطأ في جلب البيانات:', error);
+                showError(error.message);
                 
-                // عرض رسالة خطأ في الواجهة
-                const booksContainer = document.getElementById('booksContainer');
-                booksContainer.innerHTML = `
-                    <div style="grid-column: 1/-1; text-align: center; padding: 40px 20px;">
-                        <i class="fas fa-exclamation-circle" style="font-size: 50px; color: var(--favorite-color); margin-bottom: 20px;"></i>
-                        <h3 style="color: var(--favorite-color); margin-bottom: 15px;">حدث خطأ في تحميل البيانات</h3>
-                        <p style="margin-bottom: 10px;">${error.message}</p>
-                        <p style="margin-bottom: 20px;">يرجى التأكد من:</p>
-                        <ul style="text-align: right; margin-right: 30px; list-style-type: disc;">
-                            <li style="margin-bottom: 8px;">وجود ملف books-data.json في نفس المجلد</li>
-                            <li style="margin-bottom: 8px;">أن الملف يحتوي على تنسيق JSON صالح</li>
-                            <li style="margin-bottom: 8px;">أن كل كتاب يحتوي على الخصائص المطلوبة</li>
-                            <li>تشغيل الموقع على سيرفر محلي (ليس file://)</li>
-                        </ul>
-                    </div>
-                `;
+                if (error.message.includes('تأكد من اتصال الانترنت')) {
+                    showToast('تأكد من اتصال الانترنت', true);
+                } else {
+                    showToast('إذا استمرت المشكلة ابلغ الإدارة عنها', true);
+                }
             }
         }
 
-        // إعداد تصفية الأنواع
+        // عرض رسالة الخطأ في الواجهة
+        function showError(errorMessage) {
+            const booksContainer = document.getElementById('booksContainer');
+            booksContainer.innerHTML = `
+                <div class="error-container">
+                    <i class="fas fa-exclamation-circle error-icon"></i>
+                    <h3 class="error-title">حدث خطأ في تحميل البيانات</h3>
+                    <p class="error-message">${errorMessage}</p>
+                    <p>إذا استمرت المشكلة ابلغ الإدارة عنها</p>
+                </div>
+            `;
+        }
+
+        // إنشاء قائمة الأنواع
         function setupGenreFilter() {
             const genreDropdown = document.getElementById('genreDropdown');
             const allGenres = new Set();
             
-            // جمع كل الأنواع الفريدة
             booksData.forEach(book => {
                 book.genre.forEach(g => allGenres.add(g));
             });
@@ -740,7 +755,7 @@
             });
         }
 
-        // إنشاء صناديق الروايات ديناميكيًا
+        // عرض الكتب في الواجهة
         function renderBooks(books) {
             const booksContainer = document.getElementById('booksContainer');
             booksContainer.innerHTML = '';
@@ -782,7 +797,7 @@
             });
         }
 
-        // تبديل حالة المفضلة
+        // تبديل المفضلة
         function toggleFavorite(bookTitle) {
             const book = booksData.find(b => b.title === bookTitle);
             
@@ -798,14 +813,13 @@
             
             localStorage.setItem('favorites', JSON.stringify(favorites));
             
-            // إذا كنا في وضع عرض المفضلة، قم بتحديث العرض
             if (isShowingFavorites) {
                 currentBooks = [...favorites];
                 renderBooks(currentBooks);
             }
         }
 
-        // عرض إشعار توست
+        // عرض إشعار
         function showToast(message, isError = false) {
             Toastify({
                 text: message,
@@ -817,7 +831,7 @@
             }).showToast();
         }
 
-        // تطبيق الفلاتر الحالية
+        // تطبيق الفلاتر
         function applyFilters() {
             let filteredBooks = [...booksData];
             
@@ -843,7 +857,7 @@
             renderBooks(filteredBooks);
         }
 
-        // عرض المفضلة (تعمل كمفتاح تبديل)
+        // تبديل عرض المفضلة
         function toggleFavoritesView() {
             isShowingFavorites = !isShowingFavorites;
             
@@ -858,7 +872,7 @@
             } else {
                 currentBooks = [...booksData];
                 showToast("عرض جميع الروايات");
-                applyFilters(); // إعادة تطبيق الفلاتر عند العودة للعرض العام
+                applyFilters();
             }
             
             renderBooks(currentBooks);
@@ -876,11 +890,43 @@
             }
         }
 
+        // فتح نافذة التفاصيل
+        function openModal(bookData) {
+            document.getElementById('modalImage').src = bookData.imageUrl;
+            document.getElementById('modalTitle').textContent = bookData.title;
+            document.getElementById('modalDescription').textContent = bookData.description;
+            document.getElementById('modalLink').href = bookData.link;
+            
+            const bookDetails = document.getElementById('bookDetails');
+            bookDetails.innerHTML = `
+                <div class="detail-row">
+                    <span class="detail-label">نوع القصة:</span>
+                    <span class="detail-value">${bookData.genre.join('، ')}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">عدد الفصول:</span>
+                    <span class="detail-value">${bookData.chapters} فصل</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">الكاتب/ة:</span>
+                    <span class="detail-value">${bookData.author}</span>
+                </div>
+            `;
+            
+            document.getElementById('bookModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        // إغلاق نافذة التفاصيل
+        function closeModal() {
+            document.getElementById('bookModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
         // تهيئة الصفحة
         document.addEventListener('DOMContentLoaded', function() {
             fetchBooksData();
             
-            // إضافة أحداث للعناصر
             document.getElementById('searchInput').addEventListener('input', applyFilters);
             document.getElementById('searchIcon').addEventListener('click', applyFilters);
             
@@ -893,7 +939,6 @@
                 document.getElementById('genreDropdown').classList.toggle('show');
             });
             
-            // تحميل الثيم المحفوظ
             const savedTheme = localStorage.getItem('theme') || 'default';
             document.body.className = `theme-${savedTheme}`;
         });
@@ -919,40 +964,7 @@
             });
         });
 
-        // Modal Functions
-        function openModal(bookData) {
-            document.getElementById('modalImage').src = bookData.imageUrl;
-            document.getElementById('modalTitle').textContent = bookData.title;
-            document.getElementById('modalDescription').textContent = bookData.description;
-            document.getElementById('modalLink').href = bookData.link;
-            
-            // تعبئة تفاصيل الكتاب
-            const bookDetails = document.getElementById('bookDetails');
-            bookDetails.innerHTML = `
-                <div class="detail-row">
-                    <span class="detail-label">نوع القصة:</span>
-                    <span class="detail-value">${bookData.genre.join('، ')}</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">عدد الفصول:</span>
-                    <span class="detail-value">${bookData.chapters} فصل</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">الكاتب/ة:</span>
-                    <span class="detail-value">${bookData.author}</span>
-                </div>
-            `;
-            
-            document.getElementById('bookModal').style.display = 'block';
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeModal() {
-            document.getElementById('bookModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        // Close modal when clicking outside
+        // إغلاق النافذة عند النقر خارجها
         window.onclick = function(event) {
             const modal = document.getElementById('bookModal');
             if (event.target === modal) {
@@ -961,4 +973,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
